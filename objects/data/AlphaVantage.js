@@ -38,7 +38,9 @@ class AlphaVantage {
 			}, (error, response, body ) => {
 				if (error) reject(error);
 				else if (body.indexOf("application-error.html") !== -1) reject(new LibraryError("The Alpha Vantage servers are overloaded. Please try again."));
-				else if (response.statusCode !== 200) reject(body);
+				else if (response.statusCode !== 200) {
+          throw new LibraryError('Received non-200 status code - ' + response.statusCode + ': ' + JSON.stringify(response));
+      }
 				else {
 					const json = JSON.parse(body);
 					const objectKey = objectKeyOverride ? objectKeyOverride : Object.keys(json)[1];
@@ -54,6 +56,38 @@ class AlphaVantage {
 	 * @returns {Promise}
 	 */
 	sectorPerformance() {
+  const _this = this;
+  return new Promise((resolve, reject) => {
+    request({
+      uri: _this.url,
+      qs: {
+        apikey: _this.apiKey,
+        datatype: "json",
+        function: "SECTOR"
+      }
+    }, (error, response, body ) => {
+      if (error) {
+        reject(new LibraryError("Error occurred while fetching sector performance - " + error));
+      } else if (body.indexOf("application-error.html") !== -1) {
+        reject(new LibraryError("The Alpha Vantage servers are overloaded. Please try again."));
+      } else if (response.statusCode !== 200) {
+        reject(new LibraryError("Received non-200 status code - " + response.statusCode + ": " + JSON.stringify(response)));
+      } else {
+        resolve(JSON.parse(body));
+      }
+    })
+  });
+      if (error) {
+        reject(new LibraryError("Error occurred while fetching sector performance - " + error));
+      } else if (body.indexOf("application-error.html") !== -1) {
+        reject(new LibraryError("The Alpha Vantage servers are overloaded. Please try again."));
+      } else if (response.statusCode !== 200) {
+        reject(new LibraryError("Received non-200 status code - " + response.statusCode + ": " + JSON.stringify(response)));
+      } else {
+        resolve(JSON.parse(body));
+      }
+    })
+  });
 		const _this = this;
 		return new Promise((resolve, reject) => {
 			request({
@@ -66,7 +100,9 @@ class AlphaVantage {
 			}, (error, response, body ) => {
 				if (error) reject(error);
 				else if (body.indexOf("application-error.html") !== -1) reject(new LibraryError("The Alpha Vantage servers are overloaded. Please try again."));
-				else if (response.statusCode !== 200) reject(body);
+				else if (response.statusCode !== 200) {
+          throw new LibraryError('Received non-200 status code - ' + response.statusCode + ': ' + JSON.stringify(response));
+      }
 				else {
 					resolve(JSON.parse(body));
 				}
@@ -87,7 +123,22 @@ class AlphaVantage {
 			symbol: symbol,
 			interval: interval
 		}).then(res => {
+      if (res.hasOwnProperty('Error Message')) {
+        throw new LibraryError(res['Error Message']);
+      }
+      else if (res.hasOwnProperty('Note')) {
+        throw new LibraryError(res['Note']);
+      }
 			let array = [];
+
+    // New error handling added for potential error messages and response status code
+    // Improved error reporting
+      if (response.hasOwnProperty('Error Message')) {
+        throw new LibraryError(response['Error Message']);
+      }
+      else if (response.hasOwnProperty('Note')) {
+        throw new LibraryError(response['Note']);
+      }
 			for (const key in res) {
 				if (res.hasOwnProperty(key)) {
 					const o = res[key];
@@ -128,7 +179,13 @@ class AlphaVantage {
 			for (const key in res) {
 				if (res.hasOwnProperty(key)) {
 					const o = res[key];
-					if (adjusted) array.push(new Quote(
+					if (res.hasOwnProperty('Error Message')) {
+        throw new LibraryError('Error retrieving time series data - ' + res['Error Message']);
+      }
+      else if (res.hasOwnProperty('Note')) {
+        throw new LibraryError('Note - ' + res['Note']);
+      }
+      if (adjusted) array.push(new Quote(
 						{
 							symbol: symbol,
 							date: new Date(key),
@@ -148,7 +205,10 @@ class AlphaVantage {
 							original: JSON.stringify(o)
 						}
 					));
-					else array.push(new Quote(
+					else {
+          throw new LibraryError('Error retrieving time series data - ' + JSON.stringify(res));
+      }
+      array.push(new Quote(
 						{
 							symbol: symbol,
 							date: new Date(key),
@@ -234,6 +294,30 @@ class AlphaVantage {
 	 * @returns {Promise<Array>}
 	 */
 	timeSeriesMonthly(symbol, adjusted) {
+    return this._requester({
+      function: adjusted ? "TIME_SERIES_MONTHLY_ADJUSTED" : "TIME_SERIES_MONTHLY",
+      symbol: symbol
+    }).then(res => {
+      if (res.hasOwnProperty('Error Message')) {
+        throw new LibraryError('Error retrieving time series data - ' + res['Error Message']);
+      }
+      else if (res.hasOwnProperty('Note')) {
+        throw new LibraryError('Note - ' + res['Note']);
+      }    
+      let array = [];
+    
+      for (const key in res) {
+        if (res.hasOwnProperty(key)) {
+          const o = res[key];
+          if (res.hasOwnProperty('Error Message')) {
+            throw new LibraryError('Error retrieving time series data - ' + res['Error Message']);
+          }
+          else if (res.hasOwnProperty('Note')) {
+            throw new LibraryError('Note - ' + res['Note']);
+          }
+      }
+ }
+  })
 		return this._requester({
 			function: adjusted ? "TIME_SERIES_MONTHLY_ADJUSTED" : "TIME_SERIES_MONTHLY",
 			symbol: symbol
@@ -290,6 +374,23 @@ class AlphaVantage {
 	 * @returns {Promise<Array{Match}>}
 	 */
 	search(keyword) {
+  return this._requester({
+    function: 'SYMBOL_SEARCH',
+    keywords: keyword,
+  }, 'bestMatches').then(res => {
+    if (res.hasOwnProperty('Error Message')) {
+      throw new LibraryError(res['Error Message']);
+    } else if (res.hasOwnProperty('Note')) {
+      throw new LibraryError(res['Note']);
+    }
+    const array = [];
+    for (const data of res) {
+      array.push(new Match(data));
+    }
+    return array;
+  }).catch(err => {
+    throw new LibraryError('Error occurred during search - ' + err.message);
+  });
 		return this._requester({
 			function: 'SYMBOL_SEARCH',
 			keywords: keyword,
