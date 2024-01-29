@@ -283,6 +283,30 @@ class AlphaVantage {
 	 * @returns {Promise<Array>}
 	 */
 	timeSeriesMonthly(symbol, adjusted) {
+    return this._requester({
+      function: adjusted ? "TIME_SERIES_MONTHLY_ADJUSTED" : "TIME_SERIES_MONTHLY",
+      symbol: symbol
+    }).then(res => {
+      if (res.hasOwnProperty('Error Message')) {
+        throw new LibraryError('Error retrieving time series data - ' + res['Error Message']);
+      }
+      else if (res.hasOwnProperty('Note')) {
+        throw new LibraryError('Note - ' + res['Note']);
+      }    
+      let array = [];
+    
+      for (const key in res) {
+        if (res.hasOwnProperty(key)) {
+          const o = res[key];
+          if (res.hasOwnProperty('Error Message')) {
+            throw new LibraryError('Error retrieving time series data - ' + res['Error Message']);
+          }
+          else if (res.hasOwnProperty('Note')) {
+            throw new LibraryError('Note - ' + res['Note']);
+          }
+      }
+ }
+  })
 		return this._requester({
 			function: adjusted ? "TIME_SERIES_MONTHLY_ADJUSTED" : "TIME_SERIES_MONTHLY",
 			symbol: symbol
