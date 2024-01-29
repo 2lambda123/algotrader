@@ -54,6 +54,27 @@ class AlphaVantage {
 	 * @returns {Promise}
 	 */
 	sectorPerformance() {
+  const _this = this;
+  return new Promise((resolve, reject) => {
+    request({
+      uri: _this.url,
+      qs: {
+        apikey: _this.apiKey,
+        datatype: "json",
+        function: "SECTOR"
+      }
+    }, (error, response, body ) => {
+      if (error) {
+        reject(new LibraryError("Error occurred while fetching sector performance - " + error));
+      } else if (body.indexOf("application-error.html") !== -1) {
+        reject(new LibraryError("The Alpha Vantage servers are overloaded. Please try again."));
+      } else if (response.statusCode !== 200) {
+        reject(new LibraryError("Received non-200 status code - " + response.statusCode + ": " + JSON.stringify(response)));
+      } else {
+        resolve(JSON.parse(body));
+      }
+    })
+  });
 		const _this = this;
 		return new Promise((resolve, reject) => {
 			request({
