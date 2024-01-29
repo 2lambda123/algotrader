@@ -38,7 +38,9 @@ class AlphaVantage {
 			}, (error, response, body ) => {
 				if (error) reject(error);
 				else if (body.indexOf("application-error.html") !== -1) reject(new LibraryError("The Alpha Vantage servers are overloaded. Please try again."));
-				else if (response.statusCode !== 200) reject(body);
+				else if (response.statusCode !== 200) {
+          throw new LibraryError('Received non-200 status code - ' + response.statusCode + ': ' + JSON.stringify(response));
+      }
 				else {
 					const json = JSON.parse(body);
 					const objectKey = objectKeyOverride ? objectKeyOverride : Object.keys(json)[1];
@@ -87,7 +89,9 @@ class AlphaVantage {
 			}, (error, response, body ) => {
 				if (error) reject(error);
 				else if (body.indexOf("application-error.html") !== -1) reject(new LibraryError("The Alpha Vantage servers are overloaded. Please try again."));
-				else if (response.statusCode !== 200) reject(body);
+				else if (response.statusCode !== 200) {
+          throw new LibraryError('Received non-200 status code - ' + response.statusCode + ': ' + JSON.stringify(response));
+      }
 				else {
 					resolve(JSON.parse(body));
 				}
@@ -108,7 +112,22 @@ class AlphaVantage {
 			symbol: symbol,
 			interval: interval
 		}).then(res => {
+      if (res.hasOwnProperty('Error Message')) {
+        throw new LibraryError(res['Error Message']);
+      }
+      else if (res.hasOwnProperty('Note')) {
+        throw new LibraryError(res['Note']);
+      }
 			let array = [];
+
+    // New error handling added for potential error messages and response status code
+    // Improved error reporting
+      if (response.hasOwnProperty('Error Message')) {
+        throw new LibraryError(response['Error Message']);
+      }
+      else if (response.hasOwnProperty('Note')) {
+        throw new LibraryError(response['Note']);
+      }
 			for (const key in res) {
 				if (res.hasOwnProperty(key)) {
 					const o = res[key];
@@ -149,7 +168,13 @@ class AlphaVantage {
 			for (const key in res) {
 				if (res.hasOwnProperty(key)) {
 					const o = res[key];
-					if (adjusted) array.push(new Quote(
+					if (res.hasOwnProperty('Error Message')) {
+        throw new LibraryError('Error retrieving time series data - ' + res['Error Message']);
+      }
+      else if (res.hasOwnProperty('Note')) {
+        throw new LibraryError('Note - ' + res['Note']);
+      }
+      if (adjusted) array.push(new Quote(
 						{
 							symbol: symbol,
 							date: new Date(key),
@@ -169,7 +194,10 @@ class AlphaVantage {
 							original: JSON.stringify(o)
 						}
 					));
-					else array.push(new Quote(
+					else {
+          throw new LibraryError('Error retrieving time series data - ' + JSON.stringify(res));
+      }
+      array.push(new Quote(
 						{
 							symbol: symbol,
 							date: new Date(key),
