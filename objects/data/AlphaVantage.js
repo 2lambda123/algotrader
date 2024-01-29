@@ -363,6 +363,23 @@ class AlphaVantage {
 	 * @returns {Promise<Array{Match}>}
 	 */
 	search(keyword) {
+  return this._requester({
+    function: 'SYMBOL_SEARCH',
+    keywords: keyword,
+  }, 'bestMatches').then(res => {
+    if (res.hasOwnProperty('Error Message')) {
+      throw new LibraryError(res['Error Message']);
+    } else if (res.hasOwnProperty('Note')) {
+      throw new LibraryError(res['Note']);
+    }
+    const array = [];
+    for (const data of res) {
+      array.push(new Match(data));
+    }
+    return array;
+  }).catch(err => {
+    throw new LibraryError('Error occurred during search - ' + err.message);
+  });
 		return this._requester({
 			function: 'SYMBOL_SEARCH',
 			keywords: keyword,
