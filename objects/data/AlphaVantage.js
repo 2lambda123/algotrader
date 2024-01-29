@@ -533,7 +533,7 @@ class AlphaVantage {
 	 * @param {Number|Null} signalPeriod
 	 * @returns {Promise<Array>}
 	 */
-	macd(symbol, interval, timePeriod, seriesType, fastPeriod, slowPeriod, signalPeriod) {
+	macd(symbol, interval, timePeriod, seriesType, fastPeriod, slowPeriod, signalPeriod, fastMaType, slowMaType, signalMaType) {
 		return this._technical("MACD", symbol, interval, timePeriod, seriesType, [
 			{
 				key: "fastperiod",
